@@ -4,10 +4,15 @@
 let db = null;
 let currentResults = [];
 
-// DropboxダウンロードURL（直接ダウンロードリンク）
-// 元のURL: https://www.dropbox.com/scl/fi/nzwiyi3p3fnhsqzc3lbt1/sunsun_final_dialogue_database.db?rlkey=28qvhjdjcuzy817769n992q2o&st=n5ru9awz&dl=0
-// ダイレクトダウンロード用に dl=0 を dl=1 に変更
-const DB_URL = 'https://www.dropbox.com/scl/fi/nzwiyi3p3fnhsqzc3lbt1/sunsun_final_dialogue_database.db?rlkey=28qvhjdjcuzy817769n992q2o&st=n5ru9awz&dl=1';
+// データベースURL - CORS制限回避のためCORSプロキシ経由でアクセス
+const DROPBOX_URL = 'https://www.dropbox.com/scl/fi/nzwiyi3p3fnhsqzc3lbt1/sunsun_final_dialogue_database.db?rlkey=28qvhjdjcuzy817769n992q2o&st=n5ru9awz&dl=1';
+
+// 複数のCORSプロキシを準備（フォールバック用）
+const CORS_PROXIES = [
+    'https://api.allorigins.win/raw?url=',
+    'https://corsproxy.io/?',
+    'https://api.codetabs.com/v1/proxy?quest='
+];
 
 // ページ読み込み時の初期化
 document.addEventListener('DOMContentLoaded', async function() {
@@ -18,74 +23,37 @@ document.addEventListener('DOMContentLoaded', async function() {
 // データベース初期化
 async function initDatabase() {
     try {
-        // 専用の初期化メッセージを表示
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('results').innerHTML = `
             <div style="text-align: center; padding: 40px;">
                 <div style="font-size: 1.2rem; margin-bottom: 20px;">🌞 データベース初期化中...</div>
-                <div style="color: #666; margin-bottom: 10px;">Dropboxからデータベースファイル（約100MB）をダウンロードしています</div>
+                <div style="color: #666; margin-bottom: 10px;">サーバーサイドでDropboxデータベースを読み込んでいます</div>
                 <div style="color: #666;">初回のみ時間がかかります。しばらくお待ちください。</div>
-                <div id="db-progress" style="margin-top: 20px; color: #999;"></div>
+                <div id="init-status" style="margin-top: 20px; color: #999;"></div>
             </div>
         `;
         
-        const progressDiv = document.getElementById('db-progress');
-        progressDiv.textContent = 'SQL.jsライブラリを初期化中...';
-        console.log('SQL.jsライブラリを初期化中...');
+        const statusDiv = document.getElementById('init-status');
+        statusDiv.textContent = 'データベース統計を確認中...';
         
-        // SQL.jsライブラリの初期化
-        const SQL = await initSqlJs({
-            locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-        });
+        // サーバーサイドAPIでデータベース統計を確認
+        const response = await fetch('/api/stats');
+        const data = await response.json();
         
-        progressDiv.textContent = 'データベースファイルをダウンロード中...';
-        console.log('SQL.js初期化完了');
-        console.log('データベースファイルをダウンロード中...', DB_URL);
-        
-        // Dropboxからデータベースファイルを取得（CORSプロキシを使用）
-        let response;
-        try {
-            // まずは直接アクセスを試行
-            response = await fetch(DB_URL, {
-                mode: 'cors',
-                credentials: 'omit'
-            });
-        } catch (corsError) {
-            console.warn('直接アクセス失敗、プロキシ経由でアクセス中...', corsError);
-            // CORSエラーの場合、プロキシ経由でアクセス
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(DB_URL)}`;
-            response = await fetch(proxyUrl);
+        if (data.success) {
+            db = true;
+            document.getElementById('results').innerHTML = `
+                <div style="text-align: center; padding: 40px; color: green;">
+                    <div style="font-size: 1.2rem; margin-bottom: 10px;">✅ データベース初期化完了！</div>
+                    <div style="color: #666;">台本数: ${data.data.total_scripts}件</div>
+                    <div style="color: #666;">セリフ数: ${data.data.total_dialogues}件</div>
+                    <div style="color: #999; margin-top: 15px;">検索キーワードを入力してください</div>
+                </div>
+            `;
+            console.log('実データベース初期化完了:', data.data);
+        } else {
+            throw new Error(data.error);
         }
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        progressDiv.textContent = 'データベースを解析中...';
-        console.log('データベースファイルのダウンロード完了');
-        
-        const arrayBuffer = await response.arrayBuffer();
-        console.log('データベースサイズ:', arrayBuffer.byteLength, 'bytes');
-        
-        const uint8Array = new Uint8Array(arrayBuffer);
-        
-        // SQLiteデータベースを開く
-        db = new SQL.Database(uint8Array);
-        
-        // データベースの内容確認
-        progressDiv.textContent = 'データベース内容を確認中...';
-        const testQuery = db.exec("SELECT COUNT(*) as count FROM dialogues");
-        console.log('データベース内のレコード数:', testQuery[0].values[0][0]);
-        
-        // 初期化完了
-        document.getElementById('results').innerHTML = `
-            <div style="text-align: center; padding: 40px; color: green;">
-                <div style="font-size: 1.2rem; margin-bottom: 10px;">✅ データベース初期化完了！</div>
-                <div style="color: #666;">検索キーワードを入力してください</div>
-            </div>
-        `;
-        
-        console.log('データベース初期化完了');
         
     } catch (error) {
         console.error('データベース初期化エラー:', error);
@@ -188,9 +156,16 @@ async function searchByKeyword() {
     showLoading();
     
     try {
-        // SQLクエリで実際のデータベース検索
-        const results = await searchDatabase(keyword);
-        displayKeywordResults(results, keyword);
+        // サーバーサイドAPIで実際のデータベース検索
+        const response = await fetch(`/api/search/keyword?q=${encodeURIComponent(keyword)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            displayKeywordResults(data.data, data.keyword);
+        } else {
+            console.error('API Error:', data.error);
+            showNoResults();
+        }
     } catch (error) {
         console.error('検索エラー:', error);
         showNoResults();
