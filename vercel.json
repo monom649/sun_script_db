@@ -1,13 +1,1 @@
-{
-  "functions": {
-    "api/search.py": {
-      "runtime": "@vercel/python"
-    },
-    "api/stats.py": {
-      "runtime": "@vercel/python"
-    },
-    "api/script_detail.py": {
-      "runtime": "@vercel/python"
-    }
-  }
-}
+{}
