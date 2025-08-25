@@ -132,7 +132,8 @@ class handler(BaseHTTPRequestHandler):
                 if script_data['dialogues']:  # セリフがある場合のみ
                     # 実際のマッチ数を記録
                     actual_match_count = len(script_data['dialogues'])
-                    # すべてのセリフを表示（制限なし）
+                    # 代表的なセリフのみ表示（最初の3件）
+                    script_data['dialogues'] = script_data['dialogues'][:3]
                     script_data['characters'] = ', '.join(list(script_data['characters']))
                     script_data['match_count'] = actual_match_count
                     results.append(script_data)

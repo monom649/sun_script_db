@@ -465,9 +465,9 @@ function displayResults(results) {
 // キーワード検索結果カード作成
 function createKeywordResultCard(result) {
     const card = document.createElement('div');
-    card.className = 'keyword-result-card';
+    card.className = 'keyword-result-card clickable-card';
     
-    // セリフ部分の生成
+    // セリフ部分の生成（代表セリフのみ）
     let dialoguesHTML = '';
     if (result.dialogues && result.dialogues.length > 0) {
         dialoguesHTML = result.dialogues.map(d => `
@@ -478,12 +478,16 @@ function createKeywordResultCard(result) {
         `).join('');
     }
     
+    // 詳細ページへのリンクを作成
+    const currentKeyword = document.getElementById('keyword-search').value.trim();
+    const detailUrl = `detail.html?script_name=${encodeURIComponent(result.script_name)}&keyword=${encodeURIComponent(currentKeyword)}`;
+    
     card.innerHTML = `
         <div class="keyword-result-title">${result.script_name}</div>
         
         <div class="keyword-result-links">
-            ${result.script_url ? `<a href="${result.script_url}" target="_blank" class="script-link">📄 台本</a>` : ''}
-            ${result.youtube_url ? `<a href="${result.youtube_url}" target="_blank" class="youtube-link">🎬 ${result.youtube_title}</a>` : ''}
+            ${result.script_url ? `<a href="${result.script_url}" target="_blank" class="script-link" onclick="event.stopPropagation()">📄 台本</a>` : ''}
+            ${result.youtube_url ? `<a href="${result.youtube_url}" target="_blank" class="youtube-link" onclick="event.stopPropagation()">🎬 ${result.youtube_title}</a>` : ''}
         </div>
         
         <div class="keyword-result-meta">
@@ -494,11 +498,23 @@ function createKeywordResultCard(result) {
         
         ${dialoguesHTML ? `
             <div class="dialogues-section">
-                <div class="dialogues-title">該当セリフ:</div>
+                <div class="dialogues-title">代表セリフ:</div>
                 ${dialoguesHTML}
+                ${result.match_count > result.dialogues.length ? `
+                    <div class="more-dialogues">... 他 ${result.match_count - result.dialogues.length}件のセリフ</div>
+                ` : ''}
             </div>
         ` : ''}
+        
+        <div class="detail-link">
+            <span>クリックで詳細を表示 →</span>
+        </div>
     `;
+    
+    // クリックイベントを追加
+    card.addEventListener('click', function() {
+        window.location.href = detailUrl;
+    });
     
     return card;
 }

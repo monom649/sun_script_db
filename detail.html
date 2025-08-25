@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台本詳細 - サンサンキッズTV台本データベース</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌞 サンサンキッズTV台本データベース</h1>
+            <p class="subtitle">台本詳細ページ</p>
+            <div style="margin-top: 20px;">
+                <a href="index.html" style="background: var(--accent-color); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;">← 検索に戻る</a>
+            </div>
+        </header>
+
+        <!-- 台本情報 -->
+        <div class="script-info-section">
+            <div class="script-info-card">
+                <div id="script-title" class="script-title">読み込み中...</div>
+                <div id="script-meta" class="script-meta"></div>
+                <div id="youtube-info" class="youtube-info"></div>
+                <div id="match-info" class="match-info"></div>
+            </div>
+        </div>
+
+        <!-- セリフ一覧 -->
+        <div class="dialogues-section">
+            <div id="dialogues-header" class="dialogues-header">
+                <h3>セリフ一覧</h3>
+                <div id="dialogues-count" class="dialogues-count"></div>
+            </div>
+            <div id="dialogues-list" class="dialogues-list">
+                <div class="loading">セリフを読み込み中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // URLパラメータを取得
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            const scriptName = getUrlParameter('script_name');
+            const keyword = getUrlParameter('keyword');
+            
+            if (!scriptName) {
+                document.getElementById('script-title').textContent = 'エラー: 台本名が指定されていません';
+                return;
+            }
+            
+            loadScriptDetail(scriptName, keyword);
+        });
+
+        // 台本詳細を読み込み
+        async function loadScriptDetail(scriptName, keyword) {
+            try {
+                let url = `/api/script_detail?script_name=${encodeURIComponent(scriptName)}`;
+                if (keyword) {
+                    url += `&keyword=${encodeURIComponent(keyword)}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayScriptDetail(data.data);
+                } else {
+                    document.getElementById('script-title').textContent = 'エラー: ' + data.error;
+                }
+            } catch (error) {
+                console.error('詳細読み込みエラー:', error);
+                document.getElementById('script-title').textContent = 'エラー: データの読み込みに失敗しました';
+            }
+        }
+
+        // 台本詳細を表示
+        function displayScriptDetail(data) {
+            // タイトル表示
+            document.getElementById('script-title').textContent = data.script_name;
+            document.title = `${data.script_name} - サンサンキッズTV台本データベース`;
+            
+            // メタ情報表示
+            const metaHTML = `
+                <div class="meta-item">📅 ${data.release_date || '不明'}</div>
+                <div class="meta-item">🎭 ${data.themes || '不明'}</div>
+                <div class="meta-item">📚 ${data.subjects || '不明'}</div>
+                ${data.category ? `<div class="meta-item">🏷️ ${data.category}</div>` : ''}
+            `;
+            document.getElementById('script-meta').innerHTML = metaHTML;
+            
+            // YouTube情報表示
+            if (data.youtube_url && data.youtube_title) {
+                const youtubeHTML = `
+                    <div class="youtube-card">
+                        <div class="youtube-title">🎬 ${data.youtube_title}</div>
+                        <a href="${data.youtube_url}" target="_blank" class="youtube-link">YouTubeで視聴</a>
+                    </div>
+                `;
+                document.getElementById('youtube-info').innerHTML = youtubeHTML;
+            }
+            
+            // マッチ情報表示
+            if (data.keyword) {
+                const confidencePercent = Math.round(data.match_confidence * 100);
+                const matchHTML = `
+                    <div class="match-stats">
+                        <div class="match-item">🔍 検索キーワード: <strong>"${data.keyword}"</strong></div>
+                        <div class="match-item">📊 マッチ数: <strong>${data.match_count}件</strong> / 全${data.total_dialogues}件</div>
+                        <div class="match-item">🎯 マッチ度: <strong>${confidencePercent}%</strong></div>
+                    </div>
+                `;
+                document.getElementById('match-info').innerHTML = matchHTML;
+            }
+            
+            // セリフ一覧表示
+            displayDialogues(data.dialogues, data.keyword);
+        }
+
+        // セリフ一覧を表示
+        function displayDialogues(dialogues, keyword) {
+            const countText = keyword ? 
+                `${dialogues.filter(d => d.is_match).length}件の該当セリフ（全${dialogues.length}件中）` :
+                `全${dialogues.length}件のセリフ`;
+            
+            document.getElementById('dialogues-count').textContent = countText;
+            
+            if (dialogues.length === 0) {
+                document.getElementById('dialogues-list').innerHTML = `
+                    <div class="no-results">セリフが見つかりませんでした</div>
+                `;
+                return;
+            }
+            
+            const dialoguesHTML = dialogues.map(dialogue => {
+                const matchClass = dialogue.is_match ? 'dialogue-match' : '';
+                const highlightedText = keyword && dialogue.is_match ? 
+                    dialogue.dialogue.replace(new RegExp(`(${keyword})`, 'gi'), '<mark>$1</mark>') :
+                    dialogue.dialogue;
+                
+                return `
+                    <div class="dialogue-card ${matchClass}">
+                        <div class="dialogue-header">
+                            <span class="dialogue-character">${dialogue.character || '不明'}</span>
+                            <span class="dialogue-row">${dialogue.row_number}行目</span>
+                            ${dialogue.is_match ? '<span class="match-badge">マッチ</span>' : ''}
+                        </div>
+                        <div class="dialogue-text">${highlightedText}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('dialogues-list').innerHTML = dialoguesHTML;
+        }
+    </script>
+</body>
+</html>
