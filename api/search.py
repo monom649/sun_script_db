@@ -3,11 +3,12 @@ import urllib.request
 import tempfile
 import os
 import json
+import ssl
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 # Dropbox直接ダウンロードURL
-DROPBOX_URL = 'https://www.dropbox.com/scl/fi/eiiw2sav60woxr2ndrhqz/sunsun_final_dialogue_database_proper.db?rlkey=jnymntxo6ns7xdjv5fs21xok2&st=0tj8igi4&dl=1'
+DROPBOX_URL = 'https://www.dropbox.com/scl/fi/dljhp6xzshdgvq7vqk3sz/sunsun_final_dialogue_database_proper.db?rlkey=qlf38ydm1b0n0ocsdbpjx0ih8&st=7ymqa8ge&dl=1'
 
 # データベース一時ファイル
 db_path = None
@@ -25,6 +26,14 @@ def download_database():
         os.close(temp_fd)
         
         print(f"Downloading database from {DROPBOX_URL}")
+        # SSL証明書検証をスキップ
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
+        opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ssl_context))
+        urllib.request.install_opener(opener)
+        
         urllib.request.urlretrieve(DROPBOX_URL, db_path)
         print(f"Database downloaded to {db_path}")
         
