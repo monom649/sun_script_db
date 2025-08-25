@@ -91,15 +91,9 @@ async function searchByKeyword() {
     showLoading();
     
     try {
-        const response = await fetch(`/api/search/keyword?q=${encodeURIComponent(keyword)}`);
-        const data = await response.json();
-        
-        if (data.success) {
-            displayKeywordResults(data.data, data.keyword);
-        } else {
-            console.error('API Error:', data.error);
-            showNoResults();
-        }
+        // APIが実装されるまでのモックキーワード検索
+        const results = await mockKeywordSearch(keyword);
+        displayKeywordResults(results, keyword);
     } catch (error) {
         console.error('検索エラー:', error);
         showNoResults();
@@ -186,6 +180,69 @@ async function mockScriptSearch(query, theme, year) {
             }
             if (year) {
                 filtered = filtered.filter(r => r.release_date.startsWith(year));
+            }
+            
+            resolve(filtered);
+        }, 800);
+    });
+}
+
+// 模擬キーワード検索
+async function mockKeywordSearch(keyword) {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            const mockResults = [
+                {
+                    script_name: 'B1378 新幹線ロボット対決！ドクターイエローVSはやぶさ！',
+                    script_url: '',
+                    characters: 'サンサン, くもりん, ノイズ',
+                    release_date: '2021-11-20',
+                    youtube_title: '新幹線ロボット対決！ドクターイエローVSはやぶさ！シンカリオンみたいな最強ロボに変形！',
+                    youtube_url: 'https://www.youtube.com/watch?v=I95scL7u3CM',
+                    youtube_release_date: '2021-11-20',
+                    match_count: 8
+                },
+                {
+                    script_name: 'B1387 かずのドーナツ屋さん',
+                    script_url: '',
+                    characters: 'サンサン, ツクモ',
+                    release_date: '2024-06-21',
+                    youtube_title: '顔がミスドのドーナツになっちゃった！？どーなつにチョコやお菓子をデコレーション♪',
+                    youtube_url: 'https://www.youtube.com/watch?v=cfuDag4k_ic',
+                    youtube_release_date: '2024-06-21',
+                    match_count: 5
+                },
+                {
+                    script_name: 'B1383 ねじねじ建築対決！大工さんごっこ ロボットツールボックス',
+                    script_url: '',
+                    characters: 'サンサン, くもりん, プリル',
+                    release_date: '2023-03-20',
+                    youtube_title: 'ブロックをねじねじ組み立てて大工さんごっこ♪ドライバーやドリルで最強ロボットをDIY！',
+                    youtube_url: 'https://www.youtube.com/watch?v=XWLuMvSog3E',
+                    youtube_release_date: '2023-03-20',
+                    match_count: 12
+                },
+                {
+                    script_name: 'B1470 ネオスコラボ',
+                    script_url: '',
+                    characters: 'サンサン, プリンセス',
+                    release_date: '2022-02-26',
+                    youtube_title: 'お姫様が誘拐された！？謎を解いてプリンセスを取り戻せ！サンサンネオスコラボ【前編】',
+                    youtube_url: 'https://www.youtube.com/watch?v=5bYWBaxu-Xw',
+                    youtube_release_date: '2022-02-26',
+                    match_count: 6
+                }
+            ];
+            
+            // キーワードでフィルタリング
+            let filtered = mockResults;
+            if (keyword) {
+                const keywordLower = keyword.toLowerCase();
+                filtered = mockResults.filter(r => 
+                    r.script_name.toLowerCase().includes(keywordLower) ||
+                    r.youtube_title.toLowerCase().includes(keywordLower) ||
+                    r.characters.toLowerCase().includes(keywordLower)
+                );
             }
             
             resolve(filtered);
