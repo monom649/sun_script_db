@@ -2,11 +2,8 @@ import sqlite3
 import urllib.request
 import tempfile
 import os
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-
-app = Flask(__name__)
-CORS(app)
+import json
+from urllib.parse import parse_qs
 
 # Dropbox直接ダウンロードURL
 DROPBOX_URL = 'https://www.dropbox.com/scl/fi/nzwiyi3p3fnhsqzc3lbt1/sunsun_final_dialogue_database.db?rlkey=28qvhjdjcuzy817769n992q2o&st=n5ru9awz&dl=1'
@@ -43,17 +40,72 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.route('/api/search/keyword')
-def search_keyword():
-    """キーワード検索API"""
+def handler(event, context):
+    """Vercel serverless function handler"""
     try:
-        keyword = request.args.get('q', '').strip()
+        # HTTPメソッドとパスを取得
+        method = event.get('httpMethod', 'GET')
+        path = event.get('path', '')
+        query_params = event.get('queryStringParameters') or {}
         
-        if not keyword:
-            return jsonify({
+        # CORS headers
+        headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Content-Type': 'application/json'
+        }
+        
+        # OPTIONSリクエスト（プリフライト）の処理
+        if method == 'OPTIONS':
+            return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': ''
+            }
+        
+        # パスに基づいてルーティング
+        if '/stats' in path:
+            return get_stats_handler(headers)
+        elif '/search/keyword' in path:
+            keyword = query_params.get('q', '').strip()
+            return search_keyword_handler(keyword, headers)
+        else:
+            return {
+                'statusCode': 404,
+                'headers': headers,
+                'body': json.dumps({
+                    'success': False,
+                    'error': 'API endpoint not found'
+                })
+            }
+            
+    except Exception as e:
+        print(f"Error in handler: {e}")
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'application/json'
+            },
+            'body': json.dumps({
                 'success': False,
-                'error': 'キーワードが必要です'
-            }), 400
+                'error': str(e)
+            })
+        }
+
+def search_keyword_handler(keyword, headers):
+    """キーワード検索ハンドラー"""
+    try:
+        if not keyword:
+            return {
+                'statusCode': 400,
+                'headers': headers,
+                'body': json.dumps({
+                    'success': False,
+                    'error': 'キーワードが必要です'
+                })
+            }
         
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -103,22 +155,29 @@ def search_keyword():
         
         conn.close()
         
-        return jsonify({
-            'success': True,
-            'keyword': keyword,
-            'total_results': len(results),
-            'data': results
-        })
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'keyword': keyword,
+                'total_results': len(results),
+                'data': results
+            })
+        }
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({
+                'success': False,
+                'error': str(e)
+            })
+        }
 
-@app.route('/api/stats')
-def get_stats():
-    """データベース統計情報"""
+def get_stats_handler(headers):
+    """データベース統計情報ハンドラー"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -132,20 +191,25 @@ def get_stats():
         
         conn.close()
         
-        return jsonify({
-            'success': True,
-            'data': {
-                'total_scripts': total_scripts,
-                'total_dialogues': total_dialogues,
-                'status': 'Database loaded successfully'
-            }
-        })
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'data': {
+                    'total_scripts': total_scripts,
+                    'total_dialogues': total_dialogues,
+                    'status': 'Database loaded successfully'
+                }
+            })
+        }
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({
+                'success': False,
+                'error': str(e)
+            })
+        }

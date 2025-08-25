@@ -1,11 +1,7 @@
 {
   "functions": {
     "api/database.py": {
-      "runtime": "python3.9"
+      "runtime": "@vercel/python"
     }
-  },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/database.py" },
-    { "src": "/(.*)", "dest": "/$1" }
-  ]
+  }
 }
