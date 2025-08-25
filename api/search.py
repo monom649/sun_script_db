@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 # Dropbox直接ダウンロードURL
-DROPBOX_URL = 'https://www.dropbox.com/scl/fi/nzwiyi3p3fnhsqzc3lbt1/sunsun_final_dialogue_database.db?rlkey=28qvhjdjcuzy817769n992q2o&st=n5ru9awz&dl=1'
+DROPBOX_URL = 'https://www.dropbox.com/scl/fi/8qs4744iebzziienkbmyk/sunsun_final_dialogue_database_fixed.db?rlkey=e0hqbxy1o6yivd8plxrrgu763&st=dv72dzjj&dl=1'
 
 # データベース一時ファイル
 db_path = None
