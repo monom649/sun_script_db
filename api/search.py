@@ -115,9 +115,9 @@ class handler(BaseHTTPRequestHandler):
                         'characters': set()
                     }
                 
-                # キーワードがマッチした場合のみセリフを追加
+                # キーワードがセリフ内容に含まれる場合のみセリフを追加
                 dialogue = row['dialogue'] or ''
-                if keyword.lower() in dialogue.lower() or keyword.lower() in script_name.lower() or keyword.lower() in (row['youtube_title'] or '').lower():
+                if keyword.lower() in dialogue.lower():
                     scripts_dict[script_name]['dialogues'].append({
                         'character': row['character'] or '',
                         'dialogue': dialogue,
