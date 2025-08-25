@@ -93,7 +93,6 @@ class handler(BaseHTTPRequestHandler):
                 AND dialogue IS NOT NULL 
                 AND dialogue != ""
                 ORDER BY script_name, row_number
-                LIMIT 1000
             '''
             
             keyword_param = f'%{keyword}%'
@@ -133,15 +132,13 @@ class handler(BaseHTTPRequestHandler):
                 if script_data['dialogues']:  # セリフがある場合のみ
                     # 実際のマッチ数を記録
                     actual_match_count = len(script_data['dialogues'])
-                    # 最初の5つのセリフのみ表示
-                    script_data['dialogues'] = script_data['dialogues'][:5]
+                    # すべてのセリフを表示（制限なし）
                     script_data['characters'] = ', '.join(list(script_data['characters']))
                     script_data['match_count'] = actual_match_count
                     results.append(script_data)
             
             # マッチ数とリリース日でソート
             results.sort(key=lambda x: (x['match_count'], x['release_date']), reverse=True)
-            results = results[:100]  # 最大100件
             
             conn.close()
             
