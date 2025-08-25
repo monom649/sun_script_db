@@ -157,7 +157,7 @@ async function searchByKeyword() {
     
     try {
         // サーバーサイドAPIで実際のデータベース検索
-        const response = await fetch(`/api/search/keyword?q=${encodeURIComponent(keyword)}`);
+        const response = await fetch(`/api/search?q=${encodeURIComponent(keyword)}`);
         const data = await response.json();
         
         if (data.success) {
