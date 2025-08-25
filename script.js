@@ -5,6 +5,8 @@ let db = null;
 let currentResults = [];
 
 // DropboxダウンロードURL（直接ダウンロードリンク）
+// 元のURL: https://www.dropbox.com/scl/fi/nzwiyi3p3fnhsqzc3lbt1/sunsun_final_dialogue_database.db?rlkey=28qvhjdjcuzy817769n992q2o&st=n5ru9awz&dl=0
+// ダイレクトダウンロード用に dl=0 を dl=1 に変更
 const DB_URL = 'https://www.dropbox.com/scl/fi/nzwiyi3p3fnhsqzc3lbt1/sunsun_final_dialogue_database.db?rlkey=28qvhjdjcuzy817769n992q2o&st=n5ru9awz&dl=1';
 
 // ページ読み込み時の初期化
@@ -19,22 +21,48 @@ async function initDatabase() {
         showLoading();
         document.getElementById('results').innerHTML = '<p>データベースを読み込んでいます...</p>';
         
+        console.log('SQL.jsライブラリを初期化中...');
+        
         // SQL.jsライブラリの初期化
         const SQL = await initSqlJs({
             locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
         });
         
-        // Dropboxからデータベースファイルを取得
-        const response = await fetch(DB_URL);
-        if (!response.ok) {
-            throw new Error('データベースの読み込みに失敗しました');
+        console.log('SQL.js初期化完了');
+        console.log('データベースファイルをダウンロード中...', DB_URL);
+        
+        // Dropboxからデータベースファイルを取得（CORSプロキシを使用）
+        let response;
+        try {
+            // まずは直接アクセスを試行
+            response = await fetch(DB_URL, {
+                mode: 'cors',
+                credentials: 'omit'
+            });
+        } catch (corsError) {
+            console.warn('直接アクセス失敗、プロキシ経由でアクセス中...', corsError);
+            // CORSエラーの場合、プロキシ経由でアクセス
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(DB_URL)}`;
+            response = await fetch(proxyUrl);
         }
         
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        console.log('データベースファイルのダウンロード完了');
+        
         const arrayBuffer = await response.arrayBuffer();
+        console.log('データベースサイズ:', arrayBuffer.byteLength, 'bytes');
+        
         const uint8Array = new Uint8Array(arrayBuffer);
         
         // SQLiteデータベースを開く
         db = new SQL.Database(uint8Array);
+        
+        // データベースの内容確認
+        const testQuery = db.exec("SELECT COUNT(*) as count FROM dialogues");
+        console.log('データベース内のレコード数:', testQuery[0].values[0][0]);
         
         hideLoading();
         clearResults();
@@ -43,7 +71,14 @@ async function initDatabase() {
     } catch (error) {
         console.error('データベース初期化エラー:', error);
         hideLoading();
-        document.getElementById('results').innerHTML = '<p>データベースの読み込みに失敗しました。ページを再読み込みしてください。</p>';
+        document.getElementById('results').innerHTML = `
+            <div style="color: red; padding: 20px;">
+                <h3>データベース読み込みエラー</h3>
+                <p>エラー内容: ${error.message}</p>
+                <p>ブラウザのデベロッパーツールのコンソールで詳細を確認してください。</p>
+                <button onclick="location.reload()">ページを再読み込み</button>
+            </div>
+        `;
     }
 }
 
