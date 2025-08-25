@@ -18,9 +18,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 // データベース初期化
 async function initDatabase() {
     try {
-        showLoading();
-        document.getElementById('results').innerHTML = '<p>データベースを読み込んでいます...</p>';
+        // 専用の初期化メッセージを表示
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('results').innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <div style="font-size: 1.2rem; margin-bottom: 20px;">🌞 データベース初期化中...</div>
+                <div style="color: #666; margin-bottom: 10px;">Dropboxからデータベースファイル（約100MB）をダウンロードしています</div>
+                <div style="color: #666;">初回のみ時間がかかります。しばらくお待ちください。</div>
+                <div id="db-progress" style="margin-top: 20px; color: #999;"></div>
+            </div>
+        `;
         
+        const progressDiv = document.getElementById('db-progress');
+        progressDiv.textContent = 'SQL.jsライブラリを初期化中...';
         console.log('SQL.jsライブラリを初期化中...');
         
         // SQL.jsライブラリの初期化
@@ -28,6 +38,7 @@ async function initDatabase() {
             locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
         });
         
+        progressDiv.textContent = 'データベースファイルをダウンロード中...';
         console.log('SQL.js初期化完了');
         console.log('データベースファイルをダウンロード中...', DB_URL);
         
@@ -50,6 +61,7 @@ async function initDatabase() {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
+        progressDiv.textContent = 'データベースを解析中...';
         console.log('データベースファイルのダウンロード完了');
         
         const arrayBuffer = await response.arrayBuffer();
@@ -61,11 +73,18 @@ async function initDatabase() {
         db = new SQL.Database(uint8Array);
         
         // データベースの内容確認
+        progressDiv.textContent = 'データベース内容を確認中...';
         const testQuery = db.exec("SELECT COUNT(*) as count FROM dialogues");
         console.log('データベース内のレコード数:', testQuery[0].values[0][0]);
         
-        hideLoading();
-        clearResults();
+        // 初期化完了
+        document.getElementById('results').innerHTML = `
+            <div style="text-align: center; padding: 40px; color: green;">
+                <div style="font-size: 1.2rem; margin-bottom: 10px;">✅ データベース初期化完了！</div>
+                <div style="color: #666;">検索キーワードを入力してください</div>
+            </div>
+        `;
+        
         console.log('データベース初期化完了');
         
     } catch (error) {
@@ -575,7 +594,11 @@ function hideNoResults() {
 
 // 結果クリア
 function clearResults() {
-    document.getElementById('results').innerHTML = '';
+    if (db) {
+        // データベース初期化済みの場合は空にする
+        document.getElementById('results').innerHTML = '';
+    }
+    // 初期化中の場合は表示を維持
     hideLoading();
     hideNoResults();
     currentResults = [];
