@@ -71,16 +71,17 @@ class handler(BaseHTTPRequestHandler):
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            # キーワード検索クエリ
+            # キーワード検索クエリ（セリフ詳細付き）
             query = '''
-                SELECT DISTINCT 
+                SELECT 
                     script_name,
                     script_url,
-                    GROUP_CONCAT(DISTINCT character) as characters,
+                    character,
+                    dialogue,
+                    row_number,
                     release_date,
                     youtube_title,
-                    youtube_url,
-                    COUNT(*) as match_count
+                    youtube_url
                 FROM dialogues 
                 WHERE (
                     dialogue LIKE ? OR 
@@ -91,28 +92,54 @@ class handler(BaseHTTPRequestHandler):
                 )
                 AND dialogue IS NOT NULL 
                 AND dialogue != ""
-                GROUP BY script_name, release_date, youtube_title, youtube_url, script_url
-                ORDER BY match_count DESC, release_date DESC
-                LIMIT 50
+                ORDER BY script_name, row_number
+                LIMIT 200
             '''
             
             keyword_param = f'%{keyword}%'
             params = [keyword_param] * 5
             
             cursor.execute(query, params)
-            results = []
             
+            # 台本ごとにグループ化
+            scripts_dict = {}
             for row in cursor.fetchall():
-                results.append({
-                    'script_name': row['script_name'] or '',
-                    'script_url': row['script_url'] or '',
-                    'characters': row['characters'] or '',
-                    'release_date': row['release_date'] or '',
-                    'youtube_title': row['youtube_title'] or '',
-                    'youtube_url': row['youtube_url'] or '',
-                    'youtube_release_date': row['release_date'] or '',
-                    'match_count': row['match_count'] or 0
-                })
+                script_name = row['script_name']
+                if script_name not in scripts_dict:
+                    scripts_dict[script_name] = {
+                        'script_name': script_name,
+                        'script_url': row['script_url'] or '',
+                        'release_date': row['release_date'] or '',
+                        'youtube_title': row['youtube_title'] or '',
+                        'youtube_url': row['youtube_url'] or '',
+                        'dialogues': [],
+                        'characters': set()
+                    }
+                
+                # キーワードがマッチした場合のみセリフを追加
+                dialogue = row['dialogue'] or ''
+                if keyword.lower() in dialogue.lower() or keyword.lower() in script_name.lower() or keyword.lower() in (row['youtube_title'] or '').lower():
+                    scripts_dict[script_name]['dialogues'].append({
+                        'character': row['character'] or '',
+                        'dialogue': dialogue,
+                        'row_number': row['row_number'] or 0
+                    })
+                    if row['character']:
+                        scripts_dict[script_name]['characters'].add(row['character'])
+            
+            # 結果を整形
+            results = []
+            for script_data in scripts_dict.values():
+                if script_data['dialogues']:  # セリフがある場合のみ
+                    # 最初の3つのセリフのみ表示
+                    script_data['dialogues'] = script_data['dialogues'][:3]
+                    script_data['characters'] = ', '.join(list(script_data['characters']))
+                    script_data['match_count'] = len(script_data['dialogues'])
+                    results.append(script_data)
+            
+            # マッチ数とリリース日でソート
+            results.sort(key=lambda x: (x['match_count'], x['release_date']), reverse=True)
+            results = results[:50]  # 最大50件
             
             conn.close()
             

@@ -467,40 +467,37 @@ function createKeywordResultCard(result) {
     const card = document.createElement('div');
     card.className = 'keyword-result-card';
     
+    // セリフ部分の生成
+    let dialoguesHTML = '';
+    if (result.dialogues && result.dialogues.length > 0) {
+        dialoguesHTML = result.dialogues.map(d => `
+            <div class="dialogue-item">
+                <span class="dialogue-meta">${d.character || '不明'} (${d.row_number}行目):</span>
+                <span class="dialogue-text">"${d.dialogue}"</span>
+            </div>
+        `).join('');
+    }
+    
     card.innerHTML = `
         <div class="keyword-result-title">${result.script_name}</div>
-        <div class="keyword-result-info">
-            <div class="info-row">
-                <span class="info-label">台本URL:</span>
-                <span class="info-value">${result.script_url || '情報なし'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">キャラクター名:</span>
-                <span class="info-value">${result.characters || '情報なし'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">台本日付:</span>
-                <span class="info-value">${result.release_date || '情報なし'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">YouTubeタイトル:</span>
-                <span class="info-value">${result.youtube_title || '情報なし'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">YouTube URL:</span>
-                <span class="info-value">
-                    ${result.youtube_url ? `<a href="${result.youtube_url}" target="_blank" class="youtube-link">${result.youtube_url}</a>` : '情報なし'}
-                </span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">配信日:</span>
-                <span class="info-value">${result.youtube_release_date || '情報なし'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">マッチ数:</span>
-                <span class="info-value">${result.match_count}件</span>
-            </div>
+        
+        <div class="keyword-result-links">
+            ${result.script_url ? `<a href="${result.script_url}" target="_blank" class="script-link">📄 台本</a>` : ''}
+            ${result.youtube_url ? `<a href="${result.youtube_url}" target="_blank" class="youtube-link">🎬 ${result.youtube_title}</a>` : ''}
         </div>
+        
+        <div class="keyword-result-meta">
+            <span class="meta-item">📅 ${result.release_date || '不明'}</span>
+            <span class="meta-item">👥 ${result.characters || '不明'}</span>
+            <span class="meta-item">🔍 ${result.match_count}件マッチ</span>
+        </div>
+        
+        ${dialoguesHTML ? `
+            <div class="dialogues-section">
+                <div class="dialogues-title">該当セリフ:</div>
+                ${dialoguesHTML}
+            </div>
+        ` : ''}
     `;
     
     return card;

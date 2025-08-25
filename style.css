@@ -354,45 +354,90 @@ header h1 {
     color: var(--text-color);
     margin-bottom: 15px;
     line-height: 1.4;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 10px;
 }
 
-.keyword-result-info {
+.keyword-result-links {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
-.info-row {
+.script-link, .youtube-link {
+    background: var(--accent-color);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: background 0.3s ease;
+    display: inline-block;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.script-link:hover, .youtube-link:hover {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.keyword-result-meta {
     display: flex;
-    gap: 10px;
-    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
-.info-label {
+.meta-item {
+    color: #666;
+    font-size: 0.9rem;
+    background: #f5f5f5;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.dialogues-section {
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 3px solid var(--accent-color);
+}
+
+.dialogues-title {
+    font-weight: bold;
+    color: var(--text-color);
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+}
+
+.dialogue-item {
+    margin-bottom: 12px;
+    padding: 8px;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.dialogue-item:last-child {
+    margin-bottom: 0;
+}
+
+.dialogue-meta {
     font-weight: bold;
     color: var(--secondary-color);
-    min-width: 120px;
-    flex-shrink: 0;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    display: block;
+    margin-bottom: 4px;
 }
 
-.info-value {
+.dialogue-text {
     color: var(--text-color);
     font-size: 0.9rem;
     line-height: 1.4;
-    flex: 1;
-}
-
-.info-value .youtube-link {
-    color: var(--accent-color);
-    text-decoration: none;
-    word-break: break-all;
-}
-
-.info-value .youtube-link:hover {
-    text-decoration: underline;
+    font-style: italic;
 }
 
 .search-description {
