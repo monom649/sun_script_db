@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>サンサンキッズTV台本データベース</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌞 サンサンキッズTV台本データベース</h1>
+        </header>
+
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" id="keyword-search" placeholder="キーワードで検索... (例: アンパンマン, おいしい, ありがとう)">
+                <button onclick="searchByKeyword()">🔍 キーワード検索</button>
+            </div>
+            <p class="search-description">台本・セリフ・YouTubeタイトルから検索し、台本URL/キャラクター名/台本日付/YouTubeタイトル,URL,配信日をリスト表示</p>
+        </div>
+
+        <div class="results-section">
+            <div id="loading" class="loading hidden">検索中...</div>
+            <div id="results" class="results-grid"></div>
+            <div id="no-results" class="no-results hidden">
+                <p>📭 検索結果が見つかりませんでした</p>
+                <p>キーワードを変更して再度お試しください</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
