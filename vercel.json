@@ -1,10 +1,1 @@
-{
-  "functions": {
-    "api/search.py": {
-      "runtime": "@vercel/python"
-    },
-    "api/stats.py": {
-      "runtime": "@vercel/python"
-    }
-  }
-}
+{}
