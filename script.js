@@ -5,7 +5,7 @@ let db = null;
 let currentResults = [];
 
 // データベースURL - CORS制限回避のためCORSプロキシ経由でアクセス
-const DROPBOX_URL = 'https://www.dropbox.com/scl/fi/nzwiyi3p3fnhsqzc3lbt1/sunsun_final_dialogue_database.db?rlkey=28qvhjdjcuzy817769n992q2o&st=n5ru9awz&dl=1';
+const DROPBOX_URL = 'https://www.dropbox.com/scl/fi/eiiw2sav60woxr2ndrhqz/sunsun_final_dialogue_database_proper.db?rlkey=jnymntxo6ns7xdjv5fs21xok2&st=1ermmpwa&dl=1';
 
 // 複数のCORSプロキシを準備（フォールバック用）
 const CORS_PROXIES = [
