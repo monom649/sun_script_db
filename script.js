@@ -1,13 +1,51 @@
 // サンサンキッズTV台本データベース JavaScript
 
-// データベース接続（模擬）- 実際にはPython Flask APIを使用
-let databaseData = null;
+// データベース接続
+let db = null;
 let currentResults = [];
 
+// DropboxダウンロードURL（直接ダウンロードリンク）
+const DB_URL = 'https://www.dropbox.com/scl/fi/nzwiyi3p3fnhsqzc3lbt1/sunsun_final_dialogue_database.db?rlkey=28qvhjdjcuzy817769n992q2o&st=n5ru9awz&dl=1';
+
 // ページ読み込み時の初期化
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     setupSearchHandlers();
+    await initDatabase();
 });
+
+// データベース初期化
+async function initDatabase() {
+    try {
+        showLoading();
+        document.getElementById('results').innerHTML = '<p>データベースを読み込んでいます...</p>';
+        
+        // SQL.jsライブラリの初期化
+        const SQL = await initSqlJs({
+            locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+        });
+        
+        // Dropboxからデータベースファイルを取得
+        const response = await fetch(DB_URL);
+        if (!response.ok) {
+            throw new Error('データベースの読み込みに失敗しました');
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // SQLiteデータベースを開く
+        db = new SQL.Database(uint8Array);
+        
+        hideLoading();
+        clearResults();
+        console.log('データベース初期化完了');
+        
+    } catch (error) {
+        console.error('データベース初期化エラー:', error);
+        hideLoading();
+        document.getElementById('results').innerHTML = '<p>データベースの読み込みに失敗しました。ページを再読み込みしてください。</p>';
+    }
+}
 
 // タブ機能の初期化
 function initializeTabs() {
@@ -88,16 +126,72 @@ async function searchByKeyword() {
         return;
     }
     
+    if (!db) {
+        alert('データベースが読み込まれていません。しばらくお待ちください。');
+        return;
+    }
+    
     showLoading();
     
     try {
-        // APIが実装されるまでのモックキーワード検索
-        const results = await mockKeywordSearch(keyword);
+        // SQLクエリで実際のデータベース検索
+        const results = await searchDatabase(keyword);
         displayKeywordResults(results, keyword);
     } catch (error) {
         console.error('検索エラー:', error);
         showNoResults();
     }
+}
+
+// データベース検索
+async function searchDatabase(keyword) {
+    const query = `
+        SELECT DISTINCT 
+            script_name,
+            script_url,
+            GROUP_CONCAT(DISTINCT character) as characters,
+            release_date,
+            youtube_title,
+            youtube_url,
+            COUNT(*) as match_count
+        FROM dialogues 
+        WHERE (
+            dialogue LIKE ? OR 
+            script_name LIKE ? OR 
+            youtube_title LIKE ? OR 
+            themes LIKE ? OR 
+            subjects LIKE ?
+        )
+        AND dialogue IS NOT NULL 
+        AND dialogue != ""
+        GROUP BY script_name, release_date, youtube_title, youtube_url, script_url
+        ORDER BY match_count DESC, release_date DESC
+        LIMIT 50
+    `;
+    
+    const keywordParam = `%${keyword}%`;
+    const params = [keywordParam, keywordParam, keywordParam, keywordParam, keywordParam];
+    
+    const stmt = db.prepare(query);
+    stmt.bind(params);
+    
+    const results = [];
+    while (stmt.step()) {
+        const row = stmt.getAsObject();
+        results.push({
+            script_name: row.script_name || '',
+            script_url: row.script_url || '',
+            characters: row.characters || '',
+            release_date: row.release_date || '',
+            youtube_title: row.youtube_title || '',
+            youtube_url: row.youtube_url || '',
+            youtube_release_date: row.release_date || '',
+            match_count: row.match_count || 0
+        });
+    }
+    
+    stmt.free();
+    return results;
 }
 
 // セリフ検索
