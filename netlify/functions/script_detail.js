@@ -152,7 +152,9 @@ exports.handler = async (event, context) => {
         };
       }
 
-      console.log('Script detail request:', scriptName, keyword ? `with keyword: ${keyword}` : '');
+      console.log('Script detail request for:', scriptName);
+      console.log('Script name length:', scriptName.length);
+      console.log('Script name hex:', Buffer.from(scriptName, 'utf8').toString('hex'));
 
       // データベースをダウンロード
       const dbFile = await downloadDatabase();
@@ -186,14 +188,27 @@ exports.handler = async (event, context) => {
           }
           
           if (!scriptInfo) {
-            db.close();
-            resolve({
-              statusCode: 404,
-              headers,
-              body: JSON.stringify({
-                success: false,
-                error: '台本が見つかりません'
-              })
+            console.log('Script not found. Checking similar names...');
+            
+            // デバッグ: 似た名前を検索
+            const debugQuery = "SELECT DISTINCT script_name FROM dialogues WHERE script_name LIKE '%B2231%' LIMIT 5";
+            db.all(debugQuery, (debugErr, debugRows) => {
+              console.log('Similar script names found:', debugRows);
+              
+              db.close();
+              resolve({
+                statusCode: 404,
+                headers,
+                body: JSON.stringify({
+                  success: false,
+                  error: '台本が見つかりません',
+                  debug: {
+                    searched_for: scriptName,
+                    searched_length: scriptName.length,
+                    similar_names: debugRows || []
+                  }
+                })
+              });
             });
             return;
           }
