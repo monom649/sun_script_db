@@ -496,8 +496,6 @@ function createKeywordResultCard(result) {
         </div>
         
         <div class="keyword-result-links">
-            <a href="${detailUrl}" class="script-link" onclick="event.stopPropagation()">📄 台本詳細</a>
-            ${result.script_url ? `<a href="${result.script_url}" target="_blank" class="original-script-link" onclick="event.stopPropagation()">📝 元台本</a>` : ''}
             ${result.youtube_url ? `<a href="${result.youtube_url}" target="_blank" class="youtube-link" onclick="event.stopPropagation()">🎬 ${result.youtube_title}</a>` : ''}
         </div>
         
