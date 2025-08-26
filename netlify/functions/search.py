@@ -47,7 +47,7 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-def handler(event, context):
+def main(event, context):
     """Netlify Function handler"""
     
     headers = {

@@ -1,0 +1,11 @@
+{
+  "name": "sunsun-script-db",
+  "version": "1.0.0",
+  "description": "サンサンキッズTV台本データベース",
+  "dependencies": {
+    "sqlite3": "^5.1.6"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
