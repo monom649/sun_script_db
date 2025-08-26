@@ -13,24 +13,107 @@ let dbPath = null;
 function downloadDatabase() {
   return new Promise((resolve, reject) => {
     if (dbPath && fs.existsSync(dbPath)) {
-      resolve(dbPath);
-      return;
+      // ファイルサイズをチェック
+      const stats = fs.statSync(dbPath);
+      if (stats.size > 1000000) { // 1MB以上なら有効とみなす
+        resolve(dbPath);
+        return;
+      }
     }
 
-    dbPath = path.join(os.tmpdir(), 'sunsun_database.db');
+    dbPath = path.join(os.tmpdir(), `sunsun_database_${Date.now()}.db`);
+    console.log('Downloading database to:', dbPath);
     
     const file = fs.createWriteStream(dbPath);
-    const request = https.get(DROPBOX_URL, (response) => {
-      response.pipe(file);
-      file.on('finish', () => {
-        file.close();
-        resolve(dbPath);
-      });
+    
+    // User-Agentを追加してブラウザっぽくする
+    const options = {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    };
+    
+    const request = https.get(DROPBOX_URL, options, (response) => {
+      console.log('Response status:', response.statusCode);
+      
+      // リダイレクトをフォロー（複数回対応）
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        console.log('Redirected to:', response.headers.location);
+        
+        const redirectUrl = response.headers.location.startsWith('http') 
+          ? response.headers.location 
+          : 'https:' + response.headers.location;
+        
+        const redirectRequest = https.get(redirectUrl, options, (redirectResponse) => {
+          console.log('Redirect response status:', redirectResponse.statusCode);
+          
+          if (redirectResponse.statusCode >= 300 && redirectResponse.statusCode < 400 && redirectResponse.headers.location) {
+            // 2回目のリダイレクト
+            const finalUrl = redirectResponse.headers.location.startsWith('http') 
+              ? redirectResponse.headers.location 
+              : 'https:' + redirectResponse.headers.location;
+            
+            console.log('Final redirect to:', finalUrl);
+            
+            const finalRequest = https.get(finalUrl, options, (finalResponse) => {
+              handleResponse(finalResponse, file, dbPath, resolve, reject);
+            });
+            
+            finalRequest.on('error', reject);
+          } else {
+            handleResponse(redirectResponse, file, dbPath, resolve, reject);
+          }
+        });
+        
+        redirectRequest.on('error', reject);
+      } else {
+        handleResponse(response, file, dbPath, resolve, reject);
+      }
     });
     
-    request.on('error', (err) => {
-      reject(err);
-    });
+    request.on('error', reject);
+    file.on('error', reject);
+  });
+}
+
+function handleResponse(response, file, dbPath, resolve, reject) {
+  let downloadedBytes = 0;
+  
+  response.on('data', (chunk) => {
+    downloadedBytes += chunk.length;
+  });
+  
+  response.pipe(file);
+  
+  file.on('finish', () => {
+    file.close();
+    
+    console.log('Download finished, size:', downloadedBytes);
+    
+    // ファイルサイズをチェック
+    const stats = fs.statSync(dbPath);
+    console.log('File size on disk:', stats.size);
+    
+    if (stats.size < 1000000) { // 1MB未満は問題
+      const errorMsg = `Downloaded file too small: ${stats.size} bytes`;
+      console.error(errorMsg);
+      reject(new Error(errorMsg));
+      return;
+    }
+    
+    // SQLite ファイルかチェック
+    const buffer = fs.readFileSync(dbPath, { start: 0, end: 15 });
+    const header = buffer.toString();
+    
+    if (!header.includes('SQLite format 3')) {
+      const errorMsg = `Not a valid SQLite file. Header: ${header}`;
+      console.error(errorMsg);
+      reject(new Error(errorMsg));
+      return;
+    }
+    
+    console.log('Valid SQLite database downloaded');
+    resolve(dbPath);
   });
 }
 
