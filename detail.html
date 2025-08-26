@@ -61,7 +61,11 @@
         // 台本詳細を読み込み
         async function loadScriptDetail(scriptName, keyword) {
             try {
-                let url = `/api/script_detail?script_name=${encodeURIComponent(scriptName)}`;
+                // Netlify Functions のパスを使用
+                const apiBase = window.location.hostname.includes('netlify')
+                    ? '/.netlify/functions/script_detail'
+                    : '/api/script_detail';
+                let url = `${apiBase}?script_name=${encodeURIComponent(scriptName)}`;
                 if (keyword) {
                     url += `&keyword=${encodeURIComponent(keyword)}`;
                 }

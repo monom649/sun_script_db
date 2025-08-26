@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - Netlify Functions</title>
+</head>
+<body>
+    <h1>Netlify Functions API テスト</h1>
+    
+    <div>
+        <h2>1. Stats API Test</h2>
+        <button onclick="testStats()">Test Stats API</button>
+        <pre id="stats-result"></pre>
+    </div>
+    
+    <div>
+        <h2>2. Search API Test</h2>
+        <input type="text" id="search-keyword" value="せつこ" />
+        <button onclick="testSearch()">Test Search API</button>
+        <pre id="search-result"></pre>
+    </div>
+
+    <script>
+        async function testStats() {
+            const resultDiv = document.getElementById('stats-result');
+            try {
+                resultDiv.textContent = 'Loading...';
+                const response = await fetch('/.netlify/functions/stats');
+                const text = await response.text();
+                
+                try {
+                    const data = JSON.parse(text);
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                } catch {
+                    resultDiv.textContent = `Response: ${text}\nStatus: ${response.status}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function testSearch() {
+            const resultDiv = document.getElementById('search-result');
+            const keyword = document.getElementById('search-keyword').value;
+            try {
+                resultDiv.textContent = 'Loading...';
+                const response = await fetch(`/.netlify/functions/search?q=${encodeURIComponent(keyword)}`);
+                const text = await response.text();
+                
+                try {
+                    const data = JSON.parse(text);
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                } catch {
+                    resultDiv.textContent = `Response: ${text}\nStatus: ${response.status}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // ページ読み込み時に stats をテスト
+        window.onload = () => testStats();
+    </script>
+</body>
+</html>

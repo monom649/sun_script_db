@@ -37,7 +37,11 @@ async function initDatabase() {
         statusDiv.textContent = 'データベース統計を確認中...';
         
         // サーバーサイドAPIでデータベース統計を確認
-        const response = await fetch('/api/stats');
+        // Netlify Functions のパスを使用
+        const apiPath = window.location.hostname.includes('netlify') 
+            ? '/.netlify/functions/stats'
+            : '/api/stats';
+        const response = await fetch(apiPath);
         const data = await response.json();
         
         if (data.success) {
@@ -157,7 +161,11 @@ async function searchByKeyword() {
     
     try {
         // サーバーサイドAPIで実際のデータベース検索
-        const response = await fetch(`/api/search?q=${encodeURIComponent(keyword)}`);
+        // Netlify Functions のパスを使用
+        const apiPath = window.location.hostname.includes('netlify')
+            ? `/.netlify/functions/search?q=${encodeURIComponent(keyword)}`
+            : `/api/search?q=${encodeURIComponent(keyword)}`;
+        const response = await fetch(apiPath);
         const data = await response.json();
         
         if (data.success) {
