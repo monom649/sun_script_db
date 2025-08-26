@@ -33,10 +33,17 @@
     </div>
     
     <div>
-        <h2>2. Search API Test</h2>
+        <h2>4. Search API Test</h2>
         <input type="text" id="search-keyword" value="せつこ" />
         <button onclick="testSearch()">Test Search API</button>
         <pre id="search-result"></pre>
+    </div>
+    
+    <div>
+        <h2>5. Script Detail API Test</h2>
+        <input type="text" id="script-name" value="B2231 マイクラレゴの世界でイカゲーム！？ - 台本" placeholder="台本名を入力" style="width: 400px;" />
+        <button onclick="testScriptDetail()">Test Script Detail API</button>
+        <pre id="script-detail-result"></pre>
     </div>
 
     <script>
@@ -118,6 +125,25 @@
             try {
                 resultDiv.textContent = 'Loading...';
                 const response = await fetch(`/.netlify/functions/search?q=${encodeURIComponent(keyword)}`);
+                const text = await response.text();
+                
+                try {
+                    const data = JSON.parse(text);
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                } catch {
+                    resultDiv.textContent = `Response: ${text}\nStatus: ${response.status}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function testScriptDetail() {
+            const resultDiv = document.getElementById('script-detail-result');
+            const scriptName = document.getElementById('script-name').value;
+            try {
+                resultDiv.textContent = 'Loading...';
+                const response = await fetch(`/.netlify/functions/script_detail?script_name=${encodeURIComponent(scriptName)}`);
                 const text = await response.text();
                 
                 try {
