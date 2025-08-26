@@ -391,8 +391,40 @@ header h1 {
 .keyword-result-links {
     display: flex;
     gap: 15px;
-    margin-bottom: 15px;
     flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.script-link {
+    background: var(--accent-color);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+
+.script-link:hover {
+    background: #3DB5A8;
+    transform: translateY(-1px);
+}
+
+.original-script-link {
+    background: var(--primary-color);
+    color: var(--text-color);
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+
+.original-script-link:hover {
+    background: #E6C200;
+    transform: translateY(-1px);
 }
 
 .script-link, .youtube-link {
