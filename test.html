@@ -9,6 +9,12 @@
     <h1>Netlify Functions API テスト</h1>
     
     <div>
+        <h2>0. Hello Test (基本確認)</h2>
+        <button onclick="testHello()">Test Hello Function</button>
+        <pre id="hello-result"></pre>
+    </div>
+    
+    <div>
         <h2>1. Stats API Test</h2>
         <button onclick="testStats()">Test Stats API</button>
         <pre id="stats-result"></pre>
@@ -22,6 +28,24 @@
     </div>
 
     <script>
+        async function testHello() {
+            const resultDiv = document.getElementById('hello-result');
+            try {
+                resultDiv.textContent = 'Loading...';
+                const response = await fetch('/.netlify/functions/hello');
+                const text = await response.text();
+                
+                try {
+                    const data = JSON.parse(text);
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                } catch {
+                    resultDiv.textContent = `Response: ${text}\nStatus: ${response.status}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+        
         async function testStats() {
             const resultDiv = document.getElementById('stats-result');
             try {
@@ -59,8 +83,8 @@
             }
         }
         
-        // ページ読み込み時に stats をテスト
-        window.onload = () => testStats();
+        // ページ読み込み時に hello をテスト
+        window.onload = () => testHello();
     </script>
 </body>
 </html>
