@@ -19,15 +19,43 @@ function downloadDatabase() {
     dbPath = path.join(os.tmpdir(), 'sunsun_database.db');
     
     const file = fs.createWriteStream(dbPath);
+    
     const request = https.get(DROPBOX_URL, (response) => {
-      response.pipe(file);
-      file.on('finish', () => {
-        file.close();
-        resolve(dbPath);
-      });
+      // リダイレクトをフォロー
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        const redirectUrl = response.headers.location;
+        console.log('Redirected to:', redirectUrl);
+        
+        const redirectRequest = https.get(redirectUrl, (redirectResponse) => {
+          redirectResponse.pipe(file);
+          file.on('finish', () => {
+            file.close();
+            console.log('Database downloaded successfully, size:', fs.statSync(dbPath).size);
+            resolve(dbPath);
+          });
+        });
+        
+        redirectRequest.on('error', (err) => {
+          console.error('Redirect request error:', err);
+          reject(err);
+        });
+      } else {
+        response.pipe(file);
+        file.on('finish', () => {
+          file.close();
+          console.log('Database downloaded successfully, size:', fs.statSync(dbPath).size);
+          resolve(dbPath);
+        });
+      }
     });
     
     request.on('error', (err) => {
+      console.error('Download error:', err);
+      reject(err);
+    });
+    
+    file.on('error', (err) => {
+      console.error('File write error:', err);
       reject(err);
     });
   });

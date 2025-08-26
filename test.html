@@ -15,7 +15,13 @@
     </div>
     
     <div>
-        <h2>1. Stats API Test</h2>
+        <h2>1. Debug Test (ダウンロード確認)</h2>
+        <button onclick="testDebug()">Test Download Debug</button>
+        <pre id="debug-result"></pre>
+    </div>
+    
+    <div>
+        <h2>2. Stats API Test</h2>
         <button onclick="testStats()">Test Stats API</button>
         <pre id="stats-result"></pre>
     </div>
@@ -33,6 +39,24 @@
             try {
                 resultDiv.textContent = 'Loading...';
                 const response = await fetch('/.netlify/functions/hello');
+                const text = await response.text();
+                
+                try {
+                    const data = JSON.parse(text);
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                } catch {
+                    resultDiv.textContent = `Response: ${text}\nStatus: ${response.status}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function testDebug() {
+            const resultDiv = document.getElementById('debug-result');
+            try {
+                resultDiv.textContent = 'Loading...';
+                const response = await fetch('/.netlify/functions/debug');
                 const text = await response.text();
                 
                 try {
