@@ -377,8 +377,6 @@ exports.handler = async (event, context) => {
         }
         
         tryNextStrategy();
-        });
-      });
       
     } catch (error) {
       console.error('Error in script detail handler:', error);

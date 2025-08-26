@@ -1,12 +1,14 @@
 /* サンサンキッズTV台本データベース スタイル */
 
-@font-face {
+/* @font-face {
     font-family: 'PandaBakery';
     src: url('https://www.dropbox.com/scl/fi/9snf9hz532423zfyjtfwf/pandabakery.woff2?rlkey=uyctpbkzzngmg82bscy94hqkv&st=xwkbxrh5&dl=1') format('woff2');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
-}
+} */
+
+/* CORSエラー回避のため一時的にフォントを無効化 */
 
 :root {
     --primary-color: #FFD700;
