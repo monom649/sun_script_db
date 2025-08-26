@@ -90,11 +90,10 @@ exports.handler = async (event, context) => {
       return new Promise((resolve, reject) => {
         const db = new sqlite3.Database(dbFile);
         
-        // B2231を含む台本名をすべて取得
+        // 全台本名を取得して文字エンコーディング問題をチェック
         const query = `
           SELECT DISTINCT script_name
           FROM dialogues 
-          WHERE script_name LIKE '%B2231%'
           ORDER BY script_name
         `;
         
@@ -106,28 +105,50 @@ exports.handler = async (event, context) => {
             return;
           }
           
-          // 詳細な文字情報を含める
+          // 詳細な文字情報を含める - 問題のある台本を特定
           const scripts = rows.map(row => {
             const name = row.script_name;
+            const trimmed = name.trim();
+            const hasTrailingSpace = name.endsWith(' ');
+            const hasLeadingSpace = name.startsWith(' ');
+            const hasInternalIssues = name.length !== trimmed.length;
+            
             return {
               name: name,
               length: name.length,
               repr: JSON.stringify(name),
               hex: Buffer.from(name, 'utf8').toString('hex'),
-              ends_with_space: name.endsWith(' '),
-              trimmed: name.trim(),
-              trimmed_length: name.trim().length
+              ends_with_space: hasTrailingSpace,
+              starts_with_space: hasLeadingSpace,
+              has_space_issues: hasInternalIssues,
+              trimmed: trimmed,
+              trimmed_length: trimmed.length,
+              normalized: name.normalize('NFC'),
+              normalized_length: name.normalize('NFC').length
             };
           });
+          
+          // 問題のあるスクリプト名を特定
+          const problematicScripts = scripts.filter(s => 
+            s.has_space_issues || 
+            s.length !== s.normalized_length ||
+            s.name !== s.normalized
+          );
           
           resolve({
             statusCode: 200,
             headers,
             body: JSON.stringify({
               success: true,
-              total_found: scripts.length,
-              scripts: scripts,
-              search_term: 'B2231'
+              total_scripts: scripts.length,
+              problematic_count: problematicScripts.length,
+              problematic_scripts: problematicScripts,
+              all_scripts: scripts.slice(0, 10), // 最初の10件のみ表示
+              analysis: {
+                total_with_trailing_spaces: scripts.filter(s => s.ends_with_space).length,
+                total_with_leading_spaces: scripts.filter(s => s.starts_with_space).length,
+                total_with_normalization_issues: scripts.filter(s => s.length !== s.normalized_length).length
+              }
             })
           });
         });

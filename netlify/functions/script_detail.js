@@ -239,8 +239,11 @@ exports.handler = async (event, context) => {
       let scriptName = queryStringParameters.script_name || '';
       const keyword = queryStringParameters.keyword || '';
       
-      // 文字列正規化を試行
-      scriptName = scriptName.normalize('NFC');
+      // 元のスクリプト名を保存
+      const originalScriptName = scriptName;
+      
+      // 文字列正規化とトリム処理
+      scriptName = scriptName.normalize('NFC').trim();
       
       if (!scriptName) {
         return {
@@ -253,9 +256,13 @@ exports.handler = async (event, context) => {
         };
       }
 
-      console.log('Script detail request for:', scriptName);
-      console.log('Script name length:', scriptName.length);
-      console.log('Script name hex:', Buffer.from(scriptName, 'utf8').toString('hex'));
+      console.log('Script detail request:');
+      console.log('  Original:', originalScriptName);
+      console.log('  Processed:', scriptName);
+      console.log('  Original length:', originalScriptName.length);
+      console.log('  Processed length:', scriptName.length);
+      console.log('  Original hex:', Buffer.from(originalScriptName, 'utf8').toString('hex'));
+      console.log('  Processed hex:', Buffer.from(scriptName, 'utf8').toString('hex'));
 
       // データベースをダウンロード
       const dbFile = await downloadDatabase();
@@ -280,31 +287,36 @@ exports.handler = async (event, context) => {
           LIMIT 1
         `;
         
-        db.get(scriptQuery, [scriptName], (err, scriptInfo) => {
-          if (err) {
-            console.error('Script info query error:', err);
-            db.close();
-            reject(err);
-            return;
-          }
-          
-          if (!scriptInfo) {
-            console.log('Script not found. Trying fuzzy search...');
+        // 複数の検索戦略を試行
+        const searchStrategies = [
+          scriptName,                    // 処理済み名前
+          originalScriptName,            // 元の名前
+          scriptName.trim(),             // トリム済み
+          originalScriptName.trim(),     // 元のトリム済み
+          scriptName.normalize('NFC'),   // 正規化済み
+          originalScriptName.normalize('NFC')  // 元の正規化済み
+        ];
+        
+        let currentStrategyIndex = 0;
+        
+        function tryNextStrategy() {
+          if (currentStrategyIndex >= searchStrategies.length) {
+            // すべての戦略が失敗した場合、あいまい検索
+            console.log('All exact search strategies failed. Trying fuzzy search...');
             
-            // あいまい検索を試行
-            const fuzzyQuery = "SELECT DISTINCT script_name FROM dialogues WHERE script_name LIKE ? LIMIT 1";
+            const fuzzyQuery = "SELECT DISTINCT script_name FROM dialogues WHERE script_name LIKE ? LIMIT 5";
             const fuzzySearchTerm = `%${scriptName.substring(0, 10)}%`;
             
-            db.get(fuzzyQuery, [fuzzySearchTerm], (fuzzyErr, fuzzyResult) => {
-              if (fuzzyResult) {
-                console.log('Found via fuzzy search:', fuzzyResult.script_name);
+            db.all(fuzzyQuery, [fuzzySearchTerm], (fuzzyErr, fuzzyResults) => {
+              if (fuzzyResults && fuzzyResults.length > 0) {
+                console.log('Found via fuzzy search:', fuzzyResults.map(r => r.script_name));
                 
-                // 見つかった正確な名前で再試行
-                db.get(scriptQuery, [fuzzyResult.script_name], (retryErr, retryResult) => {
+                // 最初の結果で再試行
+                const bestMatch = fuzzyResults[0];
+                db.get(scriptQuery, [bestMatch.script_name], (retryErr, retryResult) => {
                   if (retryResult) {
-                    console.log('Success with correct name:', fuzzyResult.script_name);
-                    // 成功時の処理を続行（セリフ詳細取得）
-                    processScriptInfo(db, retryResult, fuzzyResult.script_name, keyword, resolve, reject, headers);
+                    console.log('Success with fuzzy match:', bestMatch.script_name);
+                    processScriptInfo(db, retryResult, bestMatch.script_name, keyword, resolve, reject, headers);
                   } else {
                     db.close();
                     resolve({
@@ -314,43 +326,57 @@ exports.handler = async (event, context) => {
                         success: false,
                         error: '台本が見つかりません（あいまい検索でも失敗）',
                         debug: {
-                          searched_for: scriptName,
-                          searched_length: scriptName.length,
-                          fuzzy_found: fuzzyResult?.script_name,
-                          fuzzy_length: fuzzyResult?.script_name?.length
+                          original: originalScriptName,
+                          processed: scriptName,
+                          strategies_tried: searchStrategies,
+                          fuzzy_results: fuzzyResults.map(r => r.script_name)
                         }
                       })
                     });
                   }
                 });
               } else {
-                // デバッグ: 似た名前を検索
-                const debugQuery = "SELECT DISTINCT script_name FROM dialogues WHERE script_name LIKE '%B2231%' LIMIT 5";
-                db.all(debugQuery, (debugErr, debugRows) => {
-                  console.log('Similar script names found:', debugRows);
-                  
-                  db.close();
-                  resolve({
-                    statusCode: 404,
-                    headers,
-                    body: JSON.stringify({
-                      success: false,
-                      error: '台本が見つかりません',
-                      debug: {
-                        searched_for: scriptName,
-                        searched_length: scriptName.length,
-                        similar_names: debugRows || []
-                      }
-                    })
-                  });
+                db.close();
+                resolve({
+                  statusCode: 404,
+                  headers,
+                  body: JSON.stringify({
+                    success: false,
+                    error: '台本が見つかりません',
+                    debug: {
+                      original: originalScriptName,
+                      processed: scriptName,
+                      strategies_tried: searchStrategies
+                    }
+                  })
                 });
               }
             });
             return;
           }
           
-          // 正常に見つかった場合の処理
-          processScriptInfo(db, scriptInfo, scriptName, keyword, resolve, reject, headers);
+          const currentStrategy = searchStrategies[currentStrategyIndex];
+          console.log(`Trying strategy ${currentStrategyIndex + 1}: "${currentStrategy}"`);
+          
+          db.get(scriptQuery, [currentStrategy], (err, scriptInfo) => {
+            if (err) {
+              console.error('Script info query error:', err);
+              db.close();
+              reject(err);
+              return;
+            }
+            
+            if (scriptInfo) {
+              console.log(`Success with strategy ${currentStrategyIndex + 1}: "${currentStrategy}"`);
+              processScriptInfo(db, scriptInfo, currentStrategy, keyword, resolve, reject, headers);
+            } else {
+              currentStrategyIndex++;
+              tryNextStrategy();
+            }
+          });
+        }
+        
+        tryNextStrategy();
         });
       });
       
