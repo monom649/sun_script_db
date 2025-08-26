@@ -116,6 +116,104 @@ function handleResponse(response, file, dbPath, resolve, reject) {
   });
 }
 
+function processScriptInfo(db, scriptInfo, scriptName, keyword, resolve, reject, headers) {
+  // セリフ詳細を取得
+  let dialogueQuery;
+  let params;
+  
+  if (keyword) {
+    // キーワード指定時は該当セリフのみ
+    dialogueQuery = `
+      SELECT 
+        character,
+        dialogue,
+        row_number
+      FROM dialogues 
+      WHERE script_name = ?
+      AND dialogue LIKE ?
+      AND dialogue IS NOT NULL 
+      AND dialogue != ""
+      ORDER BY row_number
+    `;
+    params = [scriptName, `%${keyword}%`];
+  } else {
+    // 全セリフ取得
+    dialogueQuery = `
+      SELECT 
+        character,
+        dialogue,
+        row_number
+      FROM dialogues 
+      WHERE script_name = ?
+      AND dialogue IS NOT NULL 
+      AND dialogue != ""
+      ORDER BY row_number
+    `;
+    params = [scriptName];
+  }
+  
+  db.all(dialogueQuery, params, (err, rows) => {
+    db.close();
+    
+    if (err) {
+      console.error('Dialogue query error:', err);
+      reject(err);
+      return;
+    }
+    
+    const dialogues = [];
+    let matchCount = 0;
+    
+    rows.forEach(row => {
+      const dialogueText = row.dialogue || '';
+      let isMatch = false;
+      
+      if (keyword && dialogueText.toLowerCase().includes(keyword.toLowerCase())) {
+        isMatch = true;
+        matchCount++;
+      }
+      
+      dialogues.push({
+        character: row.character || '',
+        dialogue: dialogueText,
+        row_number: row.row_number || 0,
+        is_match: isMatch
+      });
+    });
+    
+    // マッチ度計算（キーワード指定時のみ）
+    const matchConfidence = keyword && dialogues.length > 0 
+      ? matchCount / dialogues.length 
+      : 0;
+    
+    const response = {
+      success: true,
+      data: {
+        script_name: scriptInfo.script_name,
+        script_url: scriptInfo.script_url || '',
+        release_date: scriptInfo.release_date || '',
+        youtube_title: scriptInfo.youtube_title || '',
+        youtube_url: scriptInfo.youtube_url || '',
+        youtube_video_id: scriptInfo.youtube_video_id || '',
+        themes: scriptInfo.themes || '',
+        subjects: scriptInfo.subjects || '',
+        category: scriptInfo.category || '',
+        total_dialogues: dialogues.length,
+        match_count: matchCount,
+        match_confidence: matchConfidence,
+        keyword: keyword,
+        dialogues: dialogues
+      }
+    };
+    
+    resolve({
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(response)
+    });
+  });
+}
+
 exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -138,8 +236,11 @@ exports.handler = async (event, context) => {
     try {
       // URLパラメータを取得
       const queryStringParameters = event.queryStringParameters || {};
-      const scriptName = queryStringParameters.script_name || '';
+      let scriptName = queryStringParameters.script_name || '';
       const keyword = queryStringParameters.keyword || '';
+      
+      // 文字列正規化を試行
+      scriptName = scriptName.normalize('NFC');
       
       if (!scriptName) {
         return {
@@ -188,126 +289,68 @@ exports.handler = async (event, context) => {
           }
           
           if (!scriptInfo) {
-            console.log('Script not found. Checking similar names...');
+            console.log('Script not found. Trying fuzzy search...');
             
-            // デバッグ: 似た名前を検索
-            const debugQuery = "SELECT DISTINCT script_name FROM dialogues WHERE script_name LIKE '%B2231%' LIMIT 5";
-            db.all(debugQuery, (debugErr, debugRows) => {
-              console.log('Similar script names found:', debugRows);
-              
-              db.close();
-              resolve({
-                statusCode: 404,
-                headers,
-                body: JSON.stringify({
-                  success: false,
-                  error: '台本が見つかりません',
-                  debug: {
-                    searched_for: scriptName,
-                    searched_length: scriptName.length,
-                    similar_names: debugRows || []
+            // あいまい検索を試行
+            const fuzzyQuery = "SELECT DISTINCT script_name FROM dialogues WHERE script_name LIKE ? LIMIT 1";
+            const fuzzySearchTerm = `%${scriptName.substring(0, 10)}%`;
+            
+            db.get(fuzzyQuery, [fuzzySearchTerm], (fuzzyErr, fuzzyResult) => {
+              if (fuzzyResult) {
+                console.log('Found via fuzzy search:', fuzzyResult.script_name);
+                
+                // 見つかった正確な名前で再試行
+                db.get(scriptQuery, [fuzzyResult.script_name], (retryErr, retryResult) => {
+                  if (retryResult) {
+                    console.log('Success with correct name:', fuzzyResult.script_name);
+                    // 成功時の処理を続行（セリフ詳細取得）
+                    processScriptInfo(db, retryResult, fuzzyResult.script_name, keyword, resolve, reject, headers);
+                  } else {
+                    db.close();
+                    resolve({
+                      statusCode: 404,
+                      headers,
+                      body: JSON.stringify({
+                        success: false,
+                        error: '台本が見つかりません（あいまい検索でも失敗）',
+                        debug: {
+                          searched_for: scriptName,
+                          searched_length: scriptName.length,
+                          fuzzy_found: fuzzyResult?.script_name,
+                          fuzzy_length: fuzzyResult?.script_name?.length
+                        }
+                      })
+                    });
                   }
-                })
-              });
+                });
+              } else {
+                // デバッグ: 似た名前を検索
+                const debugQuery = "SELECT DISTINCT script_name FROM dialogues WHERE script_name LIKE '%B2231%' LIMIT 5";
+                db.all(debugQuery, (debugErr, debugRows) => {
+                  console.log('Similar script names found:', debugRows);
+                  
+                  db.close();
+                  resolve({
+                    statusCode: 404,
+                    headers,
+                    body: JSON.stringify({
+                      success: false,
+                      error: '台本が見つかりません',
+                      debug: {
+                        searched_for: scriptName,
+                        searched_length: scriptName.length,
+                        similar_names: debugRows || []
+                      }
+                    })
+                  });
+                });
+              }
             });
             return;
           }
           
-          // セリフ詳細を取得
-          let dialogueQuery;
-          let params;
-          
-          if (keyword) {
-            // キーワード指定時は該当セリフのみ
-            dialogueQuery = `
-              SELECT 
-                character,
-                dialogue,
-                row_number
-              FROM dialogues 
-              WHERE script_name = ?
-              AND dialogue LIKE ?
-              AND dialogue IS NOT NULL 
-              AND dialogue != ""
-              ORDER BY row_number
-            `;
-            params = [scriptName, `%${keyword}%`];
-          } else {
-            // 全セリフ取得
-            dialogueQuery = `
-              SELECT 
-                character,
-                dialogue,
-                row_number
-              FROM dialogues 
-              WHERE script_name = ?
-              AND dialogue IS NOT NULL 
-              AND dialogue != ""
-              ORDER BY row_number
-            `;
-            params = [scriptName];
-          }
-          
-          db.all(dialogueQuery, params, (err, rows) => {
-            db.close();
-            
-            if (err) {
-              console.error('Dialogue query error:', err);
-              reject(err);
-              return;
-            }
-            
-            const dialogues = [];
-            let matchCount = 0;
-            
-            rows.forEach(row => {
-              const dialogueText = row.dialogue || '';
-              let isMatch = false;
-              
-              if (keyword && dialogueText.toLowerCase().includes(keyword.toLowerCase())) {
-                isMatch = true;
-                matchCount++;
-              }
-              
-              dialogues.push({
-                character: row.character || '',
-                dialogue: dialogueText,
-                row_number: row.row_number || 0,
-                is_match: isMatch
-              });
-            });
-            
-            // マッチ度計算（キーワード指定時のみ）
-            const matchConfidence = keyword && dialogues.length > 0 
-              ? matchCount / dialogues.length 
-              : 0;
-            
-            const response = {
-              success: true,
-              data: {
-                script_name: scriptInfo.script_name,
-                script_url: scriptInfo.script_url || '',
-                release_date: scriptInfo.release_date || '',
-                youtube_title: scriptInfo.youtube_title || '',
-                youtube_url: scriptInfo.youtube_url || '',
-                youtube_video_id: scriptInfo.youtube_video_id || '',
-                themes: scriptInfo.themes || '',
-                subjects: scriptInfo.subjects || '',
-                category: scriptInfo.category || '',
-                total_dialogues: dialogues.length,
-                match_count: matchCount,
-                match_confidence: matchConfidence,
-                keyword: keyword,
-                dialogues: dialogues
-              }
-            };
-            
-            resolve({
-              statusCode: 200,
-              headers,
-              body: JSON.stringify(response)
-            });
-          });
+          // 正常に見つかった場合の処理
+          processScriptInfo(db, scriptInfo, scriptName, keyword, resolve, reject, headers);
         });
       });
       
