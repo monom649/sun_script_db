@@ -388,7 +388,12 @@ exports.handler = async (event, context) => {
         headers,
         body: JSON.stringify({
           success: false,
-          error: error.message
+          error: error ? error.message || 'サーバーエラーが発生しました' : '不明なエラーが発生しました',
+          debug: {
+            error_type: typeof error,
+            error_string: String(error),
+            stack: error ? error.stack : null
+          }
         })
       };
     }

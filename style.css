@@ -351,9 +351,22 @@ header h1 {
 .keyword-result-title {
     font-size: 1.2rem;
     font-weight: bold;
-    color: var(--text-color);
     margin-bottom: 15px;
     line-height: 1.4;
+}
+
+.script-title-link {
+    color: var(--text-color);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.script-title-link:hover {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    transform: translateX(2px);
 }
 
 .keyword-result-links {

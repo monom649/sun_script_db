@@ -491,7 +491,9 @@ function createKeywordResultCard(result) {
     const detailUrl = `detail.html?script_name=${encodeURIComponent(result.script_name)}&keyword=${encodeURIComponent(currentKeyword)}`;
     
     card.innerHTML = `
-        <div class="keyword-result-title">${result.script_name}</div>
+        <div class="keyword-result-title">
+            <a href="${detailUrl}" class="script-title-link" onclick="event.stopPropagation()">${result.script_name}</a>
+        </div>
         
         <div class="keyword-result-links">
             ${result.script_url ? `<a href="${result.script_url}" target="_blank" class="script-link" onclick="event.stopPropagation()">📄 台本</a>` : ''}
