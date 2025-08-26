@@ -40,7 +40,13 @@
     </div>
     
     <div>
-        <h2>5. Script Detail API Test</h2>
+        <h2>5. List Scripts Debug (B2231 確認)</h2>
+        <button onclick="testListScripts()">Check B2231 Script Names</button>
+        <pre id="list-scripts-result"></pre>
+    </div>
+    
+    <div>
+        <h2>6. Script Detail API Test</h2>
         <input type="text" id="script-name" value="B2231 マイクラレゴの世界でイカゲーム！？ - 台本" placeholder="台本名を入力" style="width: 400px;" />
         <button onclick="testScriptDetail()">Test Script Detail API</button>
         <pre id="script-detail-result"></pre>
@@ -125,6 +131,24 @@
             try {
                 resultDiv.textContent = 'Loading...';
                 const response = await fetch(`/.netlify/functions/search?q=${encodeURIComponent(keyword)}`);
+                const text = await response.text();
+                
+                try {
+                    const data = JSON.parse(text);
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                } catch {
+                    resultDiv.textContent = `Response: ${text}\nStatus: ${response.status}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function testListScripts() {
+            const resultDiv = document.getElementById('list-scripts-result');
+            try {
+                resultDiv.textContent = 'Loading...';
+                const response = await fetch('/.netlify/functions/list_scripts');
                 const text = await response.text();
                 
                 try {
