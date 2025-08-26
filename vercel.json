@@ -1,11 +1,17 @@
 {
-  "public": true,
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     }
   ],
+  "functions": {
+    "api/*.py": {
+      "includeFiles": "**"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -38,6 +44,10 @@
         {
           "key": "Access-Control-Allow-Headers",
           "value": "Content-Type"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "s-maxage=1, stale-while-revalidate"
         }
       ]
     }
