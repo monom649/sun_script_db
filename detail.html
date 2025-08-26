@@ -120,22 +120,22 @@
             // YouTube情報と台本リンク表示
             let linksHTML = '';
             
-            // 台本（スプレッドシート）リンク
-            if (data.script_url) {
-                linksHTML += `
-                    <div class="script-card">
-                        <div class="script-card-title">📝 元の台本（スプレッドシート）</div>
-                        <a href="${data.script_url}" target="_blank" class="script-button">台本を開く</a>
-                    </div>
-                `;
-            }
-            
-            // YouTube情報
+            // YouTube情報を先に表示
             if (data.youtube_url && data.youtube_title) {
                 linksHTML += `
                     <div class="youtube-card">
                         <div class="youtube-title">🎬 ${data.youtube_title}</div>
                         <a href="${data.youtube_url}" target="_blank" class="youtube-link">YouTubeで視聴</a>
+                    </div>
+                `;
+            }
+            
+            // 台本（スプレッドシート）リンクを下に表示
+            if (data.script_url) {
+                linksHTML += `
+                    <div class="script-card">
+                        <div class="script-card-title">📝 元の台本（スプレッドシート）</div>
+                        <a href="${data.script_url}" target="_blank" class="script-button">台本を開く</a>
                     </div>
                 `;
             }
