@@ -1,5 +1,13 @@
 /* サンサンキッズTV台本データベース スタイル */
 
+@font-face {
+    font-family: 'PandaBakery';
+    src: url('https://www.dropbox.com/scl/fi/9snf9hz532423zfyjtfwf/pandabakery.woff2?rlkey=uyctpbkzzngmg82bscy94hqkv&st=xwkbxrh5&dl=1') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
     --primary-color: #FFD700;
     --secondary-color: #FF6B6B;
@@ -25,6 +33,11 @@ body {
     min-height: 100vh;
 }
 
+/* 見出し要素にカスタムフォントを適用 */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'PandaBakery', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -42,6 +55,7 @@ header {
 }
 
 header h1 {
+    font-family: 'PandaBakery', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 2.5rem;
     color: var(--primary-color);
     margin-bottom: 10px;
@@ -49,6 +63,7 @@ header h1 {
 }
 
 .subtitle {
+    font-family: 'PandaBakery', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 1.1rem;
     color: #666;
     font-weight: 500;
@@ -218,6 +233,7 @@ header h1 {
 
 /* 統計コンテンツ */
 .stats-content h3 {
+    font-family: 'PandaBakery', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: var(--secondary-color);
     margin-bottom: 20px;
     text-align: center;
@@ -349,6 +365,7 @@ header h1 {
 }
 
 .keyword-result-title {
+    font-family: 'PandaBakery', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 1.2rem;
     font-weight: bold;
     margin-bottom: 15px;
@@ -566,6 +583,7 @@ header h1 {
 }
 
 .script-title {
+    font-family: 'PandaBakery', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 1.8rem;
     font-weight: bold;
     color: var(--text-color);
@@ -650,6 +668,7 @@ header h1 {
 }
 
 .dialogues-header h3 {
+    font-family: 'PandaBakery', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: var(--secondary-color);
     margin: 0;
 }
