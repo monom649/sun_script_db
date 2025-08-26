@@ -1,13 +1,13 @@
+from http.server import BaseHTTPRequestHandler
 import sqlite3
 import urllib.request
 import tempfile
 import os
 import json
 import ssl
-from http.server import BaseHTTPRequestHandler
 
 # Dropbox直接ダウンロードURL
-DROPBOX_URL = 'https://www.dropbox.com/scl/fi/dljhp6xzshdgvq7vqk3sz/sunsun_final_dialogue_database_proper.db?rlkey=qlf38ydm1b0n0ocsdbpjx0ih8&st=7ymqa8ge&dl=1'
+DROPBOX_URL = 'https://www.dropbox.com/scl/fi/dljhp6xzshdgvq7vqk3sz/sunsun_final_dialogue_database_proper.db?rlkey=qlf38ydm1b0n0ocsdbpjx0ih8&st=2h1nmfhq&dl=1'
 
 # データベース一時ファイル
 db_path = None
@@ -52,14 +52,6 @@ def get_db_connection():
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
-            # CORSヘッダーを設定
-            self.send_response(200)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            
             # データベース統計を取得
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -82,19 +74,28 @@ class handler(BaseHTTPRequestHandler):
                 }
             }
             
+            # レスポンスを送信
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            self.end_headers()
+            
             self.wfile.write(json.dumps(response).encode())
             
         except Exception as e:
             print(f"Error in stats handler: {e}")
-            self.send_response(500)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            
             response = {
                 'success': False,
                 'error': str(e)
             }
+            
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
             self.wfile.write(json.dumps(response).encode())
     
     def do_OPTIONS(self):
